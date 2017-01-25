@@ -10,6 +10,7 @@ function $Promise(arg) {
     throw new Error('argument not a function.');
   }
 
+  this._handlerGroups = [];
   this._state = 'pending';
   this._internalResolve = function(passedValue) {
 
@@ -17,6 +18,14 @@ function $Promise(arg) {
       this._value = passedValue;
       this._state = 'fulfilled';
     }
+
+
+    while ( this._handlerGroups.length > 0) {
+
+      this._callHandlers(this._value);
+
+    }
+
 
   };
   this._internalReject = function(reason) {
@@ -26,17 +35,48 @@ function $Promise(arg) {
     }
   };
 
-  console.log(this);
+
+
+  this.then = function(successHandler, errHandler) {
+    //console.log(typeof successHandler, successHandler);
+      if(typeof successHandler !== 'function') {
+        successHandler = false;
+      }
+      if(typeof errHandler !== 'function') {
+        errHandler = false;
+      }
+    this._handlerGroups.push({
+      successCb: successHandler,
+      errorCb: errHandler
+    })
+    //console.log(this._handlerGroups);
+    if(this._state === 'fulfilled') {
+      while ( this._handlerGroups.length > 0) {
+
+        this._callHandlers(this._value);
+
+      }
+    }
+  }
+  //console.log(this);
 
 
   let resolve = (value) => {
     this._internalResolve(value);
+    //console.log(this._handlerGroups);
+    console.log(this);
+
   }
   let reject = (reason) => {
     this._internalReject(reason);
   }
   arg(resolve, reject);
 
+}
+
+$Promise.prototype._callHandlers = function(value) {
+  console.log(this._handlerGroups);
+  this._handlerGroups.shift().successCb(value);
 }
 
 
