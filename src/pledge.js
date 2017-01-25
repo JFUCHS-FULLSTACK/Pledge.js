@@ -6,80 +6,116 @@ Promises Workshop: build the pledge.js ES6-style promise library
 
 function $Promise(arg) {
 
-  if(typeof arg !== 'function') {
-    throw new Error('argument not a function.');
-  }
-
-  this._handlerGroups = [];
-  this._state = 'pending';
-  this._internalResolve = function(passedValue) {
-
-    if(this._state === 'pending') {
-      this._value = passedValue;
-      this._state = 'fulfilled';
+    if (typeof arg !== 'function') {
+        throw new Error('argument not a function.');
     }
 
+    this._handlerGroups = [];
+    this._state = 'pending';
+    this._internalResolve = function(passedValue) {
 
-    while ( this._handlerGroups.length > 0) {
-
-      this._callHandlers(this._value);
-
-    }
-
-
-  };
-  this._internalReject = function(reason) {
-    if(this._state === 'pending') {
-      this._value = reason;
-      this._state = 'rejected';
-    }
-  };
+        if (this._state === 'pending') {
+            this._value = passedValue;
+            this._state = 'fulfilled';
+        }
 
 
-
-  this.then = function(successHandler, errHandler) {
-    //console.log(typeof successHandler, successHandler);
-      if(typeof successHandler !== 'function') {
-        successHandler = false;
-      }
-      if(typeof errHandler !== 'function') {
-        errHandler = false;
-      }
-    this._handlerGroups.push({
-      successCb: successHandler,
-      errorCb: errHandler
-    })
-    //console.log(this._handlerGroups);
-    if(this._state === 'fulfilled') {
-      while ( this._handlerGroups.length > 0) {
-
-        this._callHandlers(this._value);
-
-      }
-    }
-  }
-  //console.log(this);
+        while (this._handlerGroups.length > 0) {
+            this._callHandlers(this._value);
+        }
 
 
-  let resolve = (value) => {
-    this._internalResolve(value);
-    //console.log(this._handlerGroups);
-    console.log(this);
+    };
+    this._internalReject = function(reason) {
+        if (this._state === 'pending') {
+            this._value = reason;
+            this._state = 'rejected';
+        }
+        while (this._handlerGroups.length > 0) {
 
-  }
-  let reject = (reason) => {
-    this._internalReject(reason);
-  }
-  arg(resolve, reject);
+            this._callHandlers(this._value);
+
+        }
+    };
+
+    let context = this;
+    this.then = function(successHandler, errHandler) {
+        //console.log(typeof successHandler, successHandler);
+        if (typeof successHandler !== 'function') {
+            successHandler = false;
+        }
+        if (typeof errHandler !== 'function') {
+            errHandler = false;
+        }
+        let thenPromise = new $Promise(function() {});
+        console.log(context._value);
+        // if (typeof context._handlerGroups[0].successCb !== 'function') {
+        //     thenPromise._value = context._value;
+        // }
+        this._handlerGroups.push({
+            successCb: successHandler,
+            errorCb: errHandler,
+            downstream: thenPromise
+        });
+        //console.log(this._handlerGroups);
+        if (this._state !== 'pending') {
+            while (this._handlerGroups.length > 0) {
+
+                this._callHandlers(this._value);
+
+            }
+        }
+        
+        return thenPromise;
+    };
+    //console.log(this);
+
+    this.catch = function(func) {
+        return this.then(null, func);
+    };
+
+
+    let resolve = (value) => {
+        this._internalResolve(value);
+        //console.log(this._handlerGroups);
+        // console.log(this);
+
+    };
+    let reject = (reason) => {
+        this._internalReject(reason);
+    };
+    arg(resolve, reject);
 
 }
 
 $Promise.prototype._callHandlers = function(value) {
-  console.log(this._handlerGroups);
-  this._handlerGroups.shift().successCb(value);
-}
-
-
+    // console.log(this._handlerGroups);
+    if (this._state === 'fulfilled') {
+      let successH = this._handlerGroups.shift();
+      // if ((typeof successH.successCb === 'function') && (successH.downstream instanceof $Promise)) {
+      //       successH.downstream._handlerGroups.push({successCb: successH.successCb(value)});
+      //       successH.downstream._state = 'fulfilled';
+      //   }
+      if (typeof successH.successCb === 'function') {
+        //&& !(successH.downstream instanceof $Promise)) {
+        successH.successCb(value);
+      }
+      else {
+        successH.downstream._state = 'fulfilled';
+        successH.downstream._value = value;
+      }
+    } else if (this._state === 'rejected') {
+        let errorH = this._handlerGroups.shift();
+        // console.log(errorH);
+        if (typeof errorH.errorCb === 'function') {
+            errorH.errorCb(value);
+        }
+        else {
+          errorH.downstream._state = 'rejected';
+          errorH.downstream._value = value;
+        }
+    }
+};
 
 
 /*-------------------------------------------------------
