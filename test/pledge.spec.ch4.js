@@ -106,7 +106,7 @@ describe('For a given promiseA (pA)', function(){
 
     // This is for normal (synchronous / non-promise) return values
 
-    xit("if pA's error handler returns a value `x`, pB is fulfilled with `x`", function (done) {
+    it("if pA's error handler returns a value `x`, pB is fulfilled with `x`", function (done) {
       // Why fulfilled? This is similar to `try`-`catch`. If promiseA is
       // rejected (equivalent to `try` failure), we pass the reason to
       // promiseA's error handler (equivalent to `catch`). We have now
@@ -122,13 +122,13 @@ describe('For a given promiseA (pA)', function(){
     // Exceptions cause the returned promise to be rejected with the error.
     // Hint: you will need to use `try` & `catch` to make this work.
 
-    xit("if pA's success handler throws a reason `e`, pB is rejected with `e`", function (done) {
+    it("if pA's success handler throws a reason `e`, pB is rejected with `e`", function (done) {
       var promiseB = promiseA.then( thisThrowsShade );
       promiseA._internalResolve();
       expect( promiseB ).toRejectWith( 'shade', done );
     }, FAST_TIMEOUT);
 
-    xit("if pA's error handler throws a reason `e`, pB is rejected with `e`", function (done) {
+    it("if pA's error handler throws a reason `e`, pB is rejected with `e`", function (done) {
       var promiseB = promiseA.catch( thisThrowsShade );
       promiseA._internalReject();
       expect( promiseB ).toRejectWith( 'shade', done );
@@ -139,7 +139,7 @@ describe('For a given promiseA (pA)', function(){
     // Instead, we want to make promiseB to "become" pZ by copying
     // pZ's behavior — aka assimilation. These four tests are brain-benders.
 
-    xit("if pA's success handler returns promiseZ which fulfills, pB mimics pZ", function (done) {
+    it("if pA's success handler returns promiseZ which fulfills, pB mimics pZ", function (done) {
       var promiseZ = new $Promise(noop);
       var promiseB = promiseA.then(function(){
         return promiseZ;

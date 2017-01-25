@@ -12,7 +12,7 @@ function $Promise(arg) {
 
     this._handlerGroups = [];
     this._state = 'pending';
-    this._internalResolve = function(passedValue) {
+    this._internalResolve = function (passedValue) {
 
         if (this._state === 'pending') {
             this._value = passedValue;
@@ -26,7 +26,7 @@ function $Promise(arg) {
 
 
     };
-    this._internalReject = function(reason) {
+    this._internalReject = function (reason) {
         if (this._state === 'pending') {
             this._value = reason;
             this._state = 'rejected';
@@ -39,7 +39,7 @@ function $Promise(arg) {
     };
 
     let context = this;
-    this.then = function(successHandler, errHandler) {
+    this.then = function (successHandler, errHandler) {
         //console.log(typeof successHandler, successHandler);
         if (typeof successHandler !== 'function') {
             successHandler = false;
@@ -47,7 +47,7 @@ function $Promise(arg) {
         if (typeof errHandler !== 'function') {
             errHandler = false;
         }
-        let thenPromise = new $Promise(function() {});
+        let thenPromise = new $Promise(function () { });
         console.log(context._value);
         // if (typeof context._handlerGroups[0].successCb !== 'function') {
         //     thenPromise._value = context._value;
@@ -65,12 +65,12 @@ function $Promise(arg) {
 
             }
         }
-        
+
         return thenPromise;
     };
     //console.log(this);
 
-    this.catch = function(func) {
+    this.catch = function (func) {
         return this.then(null, func);
     };
 
@@ -88,36 +88,95 @@ function $Promise(arg) {
 
 }
 
-$Promise.prototype._callHandlers = function(value) {
+$Promise.prototype._callHandlers = function (value) {
     // console.log(this._handlerGroups);
+    let hGroup;
     if (this._state === 'fulfilled') {
-      let successH = this._handlerGroups.shift();
-      // if ((typeof successH.successCb === 'function') && ) {
-      //       successH.downstream._handlerGroups.push({successCb: successH.successCb(value)});
-      //       successH.downstream._state = 'fulfilled';
-      //   }
-      if (typeof successH.successCb === 'function') {
-        if (successH.downstream instanceof $Promise){
-          console.log(successH.downstream);
-          // successH.downstream._handlerGroups.push(successH.successCb(value), null);
-          successH.downstream._value = successH.successCb(value);
-          successH.downstream._state = 'fulfilled';
-        }
-        else { successH.successCb(value); }
-      }
-      else {
-        successH.downstream._state = 'fulfilled';
-        successH.downstream._value = value;
-      }
-    } else if (this._state === 'rejected') {
-        let errorH = this._handlerGroups.shift();
-        // console.log(errorH);
-        if (typeof errorH.errorCb === 'function') {
-            errorH.errorCb(value);
+        hGroup = this._handlerGroups.shift();
+        if (typeof hGroup.successCb === 'function') {
+            if (hGroup.downstream instanceof $Promise) {
+
+                if (hGroup.downstream._handlerGroups[0] !== undefined)  {
+                    while (hGroup.downstream._handerGroups[0].downstream instanceof $Promise) {
+                        //console.log('here', hGroup.downstream);
+                            this._value = hGroup.downstream._value;
+                            hGroup.successCb = hGroup.downstream._handerGroups[0].successCb;
+                             hGroup.downstream = hGroup.downstream._handerGroups[0].downstream;
+
+                    }
+
+                }
+
+                //console.log('here', hGroup.successCb);
+                let foundErr = false;
+                let successVal;
+                try {
+                    successVal = hGroup.successCb(value)
+
+                } catch (err) {
+                    console.log('here', err);
+                    hGroup.downstream._state = 'rejected';
+                    hGroup.downstream._value = err;
+                    foundErr = true;
+
+                }
+                // if(hGroup.successCb(value) instanceof Error) {
+                //     console.log('inside instanceof error');
+                // } else {
+                if (!foundErr) {
+                    console.log('here');
+                    hGroup.downstream._value = successVal;
+                    hGroup.downstream._state = 'fulfilled';
+                }
+                // }
+
+            }
+            else { hGroup.successCb(value); }
         }
         else {
-          errorH.downstream._state = 'rejected';
-          errorH.downstream._value = value;
+            hGroup.downstream._state = 'fulfilled';
+            hGroup.downstream._value = value;
+        }
+    } else if (this._state === 'rejected') {
+        hGroup = this._handlerGroups.shift();
+        // console.log(errorH);
+        if (typeof hGroup.errorCb === 'function') {
+
+
+            if (hGroup.downstream instanceof $Promise) {
+
+                let foundErr = false;
+                let failureVal;
+                try {
+                    failureVal = hGroup.errorCb(value)
+
+                } catch (err) {
+                    console.log('here', err);
+                    hGroup.downstream._state = 'rejected';
+                    hGroup.downstream._value = err;
+                    foundErr = true;
+
+                }
+                console.log(failureVal);
+                // if(hGroup.successCb(value) instanceof Error) {
+                //     console.log('inside instanceof error');
+                // } else {
+                if (!foundErr) {
+                    console.log('here');
+                    hGroup.downstream._value = failureVal;
+                    hGroup.downstream._state = 'fulfilled';
+                }
+                // }
+
+
+            }
+            else {
+                hGroup.errorCb(value);
+            }
+        }
+        else {
+            hGroup.downstream._state = 'rejected';
+            hGroup.downstream._value = value;
         }
     }
 };
