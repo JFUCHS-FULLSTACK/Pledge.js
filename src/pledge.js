@@ -92,13 +92,18 @@ $Promise.prototype._callHandlers = function(value) {
     // console.log(this._handlerGroups);
     if (this._state === 'fulfilled') {
       let successH = this._handlerGroups.shift();
-      // if ((typeof successH.successCb === 'function') && (successH.downstream instanceof $Promise)) {
+      // if ((typeof successH.successCb === 'function') && ) {
       //       successH.downstream._handlerGroups.push({successCb: successH.successCb(value)});
       //       successH.downstream._state = 'fulfilled';
       //   }
       if (typeof successH.successCb === 'function') {
-        //&& !(successH.downstream instanceof $Promise)) {
-        successH.successCb(value);
+        if (successH.downstream instanceof $Promise){
+          console.log(successH.downstream);
+          // successH.downstream._handlerGroups.push(successH.successCb(value), null);
+          successH.downstream._value = successH.successCb(value);
+          successH.downstream._state = 'fulfilled';
+        }
+        else { successH.successCb(value); }
       }
       else {
         successH.downstream._state = 'fulfilled';
